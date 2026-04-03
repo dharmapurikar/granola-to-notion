@@ -1,6 +1,7 @@
 # Granola → Notion Sync
 
 Migrate meeting notes from [Granola](https://granola.ai) to Notion with a local SQLite checkpoint for idempotent, resumable syncs.
+The objective is to have a local copy of all the meeting notes and also have them in Notion.
 
 **Pipeline:** `Granola API` → `SQLite (local)` → `Notion API`
 
@@ -43,7 +44,8 @@ granola-to-notion/
 ### 1. Clone / enter the project
 
 ```bash
-cd ~/hermes-workspace/personal/granola-to-notion
+git clone git@github.com:dharmapurikar/granola-to-notion.git
+cd granola-to-notion
 ```
 
 ### 2. Install dependencies
@@ -73,8 +75,8 @@ cp config.example.yaml config.yaml
 
 ```yaml
 notion:
-  parent_page_id: "336916a5-3018-8016-98d0-c105d579134f"
-  database_name: "Granola Meeting Imports"
+  parent_page_id: "336916a5-3018-8016-98d0-xxxxxxxxx" # Example ID
+  database_name: "Granola Meeting Imports" # Example DB name, you can have any
 ```
 
 The `parent_page_id` is the 32-char hex ID from your Notion page URL:
@@ -110,7 +112,7 @@ Fetch 1 (or N) notes from Granola, push to Notion, and run a quality check on th
 python test_single.py
 
 # Specific note by ID
-python test_single.py not_1d3tmYTlCICgjy
+python test_single.py not_1d3tmYTlxxx
 
 # 3 most recent notes
 python test_single.py --latest 3
