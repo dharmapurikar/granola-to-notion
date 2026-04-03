@@ -251,17 +251,78 @@ if row and row[0]:
 
 ---
 
+## Splitting Long Blocks (2000-char Limit)
+
+Notion enforces a **2000-char limit per rich_text content** on every block type — not just code blocks. A single `bulleted_list_item` or `paragraph` with a 3000-char string will get a 400 validation error.
+
+**Don't truncate — split.** Use a post-processor that splits any block exceeding the limit into multiple blocks of the same type, preserving bold/italic annotations across the split boundary.
+
+```python
+def _split_long_blocks(blocks: list[dict]) -> list[dict]:
+    """Split blocks whose rich_text exceeds 2000 chars into multiple blocks."""
+    CHUNK = 1990  # Safety margin — see pitfall #10
+    result = []
+
+    for block in blocks:
+        block_type = block.get("type")
+        inner = block.get(block_type, {})
+        rich_text = inner.get("rich_text", [])
+        total_len = sum(len(p.get("text", {}).get("content", "")) for p in rich_text)
+
+        if total_len <= CHUNK or not rich_text:
+            result.append(block)
+            continue
+
+        # Rebuild rich_text parts, splitting at boundary
+        chunks, current_chunk, current_len = [], [], 0
+        for part in rich_text:
+            content = part.get("text", {}).get("content", "")
+            if not content:
+                current_chunk.append(part)
+                continue
+            offset = 0
+            while offset < len(content):
+                take = min(CHUNK - current_len, len(content) - offset)
+                new_part = {
+                    "type": part.get("type", "text"),
+                    "text": {"content": content[offset : offset + take]},
+                }
+                if "annotations" in part:
+                    new_part["annotations"] = part["annotations"]
+                current_chunk.append(new_part)
+                current_len += take
+                offset += take
+                if current_len >= CHUNK:
+                    chunks.append(current_chunk)
+                    current_chunk, current_len = [], 0
+        if current_chunk:
+            chunks.append(current_chunk)
+
+        for chunk_rich in chunks:
+            new_block = {"object": "block", "type": block_type}
+            new_block[block_type] = {**inner, "rich_text": chunk_rich}
+            result.append(new_block)
+
+    return result
+```
+
+Wire it into both `markdown_to_notion_blocks()` and `build_note_blocks()` return paths.
+
+---
+
 ## Common Pitfalls
 
 1. **Wrong API version** — `2025-09-03` drops properties on `create_database`. Use `2022-06-28`.
 2. **Parent object missing `type`** — must be `{"type": "page_id", "page_id": "..."}`, not just `{"page_id": "..."}`.
 3. **`create_database` properties not persisting** — works in curl but not Python requests. Check headers and JSON serialization. May need `json=` parameter (not `data=json.dumps(...)`).
 4. **Duplicate blocks on re-run** — always clear page or check SQLite checkpoint before creating.
-5. **Code blocks > 2000 chars** — truncate with `\n# ... (truncated)` message.
+5. **Code blocks > 2000 chars** — use `_split_long_blocks()` instead of truncating.
 6. **Bold text renders as `**text**` in Notion** — means annotations weren't set. Must use `rich_text` array with `annotations.bold = True`, not plain text.
 7. **Table separator rows `|---|` rendered as bullets** — skip any cell matching regex `^[-:]+$`.
 8. **Search filter `value: "database"` returns 400** — use `value: "data_source"` for API v2025+.
 9. **Batched block append — after first 100 blocks** — use the last block ID from the previous response, not the page ID.
+10. **2000-char limit off-by-one** — even with a 2000-char chunk size, multi-part rich_text with annotations can land at 2001 chars due to boundary rounding. **Use 1990 (10-char safety margin)**, not 2000. Discovered the hard way: two notes kept failing at exactly 2001 chars.
+11. **Summary as database column is redundant** — if you're already rendering the summary as formatted blocks (headings, bold, bullets) in the page body, a separate "Summary" rich_text column just truncates at 2000 chars and clutters the database view. Put it in the page body only.
 
 ---
 

@@ -139,6 +139,77 @@ def _divider() -> dict[str, Any]:
     return {"object": "block", "type": "divider", "divider": {}}
 
 
+def _split_long_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Post-process: split any block whose rich_text exceeds 2000 chars.
+
+    Notion enforces a 2000-char limit per rich_text content. Instead of
+    truncating, we split long blocks into multiple blocks of the same type.
+    """
+    CHUNK = 1990  # 10-char safety margin below Notion's 2000 limit
+    result: list[dict[str, Any]] = []
+
+    for block in blocks:
+        block_type = block.get("type")
+        inner = block.get(block_type, {})
+        rich_text = inner.get("rich_text", [])
+
+        # Calculate total content length across all rich_text parts
+        total_len = sum(part.get("text", {}).get("content", "").__len__() for part in rich_text)
+
+        if total_len <= CHUNK or not rich_text:
+            result.append(block)
+            continue
+
+        # Rebuild rich_text parts, splitting at the 2000-char boundary
+        chunks: list[list[dict[str, Any]]] = []
+        current_chunk: list[dict[str, Any]] = []
+        current_len = 0
+
+        for part in rich_text:
+            content = part.get("text", {}).get("content", "")
+            part_len = len(content)
+            remaining_base = dict(part)
+            remaining_base.pop("text", None)
+
+            if not content:
+                current_chunk.append(part)
+                continue
+
+            offset = 0
+            while offset < part_len:
+                available = CHUNK - current_len
+                take = min(available, part_len - offset)
+
+                new_part: dict[str, Any] = {
+                    "type": part.get("type", "text"),
+                    "text": {"content": content[offset : offset + take]},
+                }
+                if "annotations" in part:
+                    new_part["annotations"] = part["annotations"]
+
+                current_chunk.append(new_part)
+                current_len += take
+                offset += take
+
+                if current_len >= CHUNK:
+                    chunks.append(current_chunk)
+                    current_chunk = []
+                    current_len = 0
+
+        if current_chunk:
+            chunks.append(current_chunk)
+
+        # Emit one block per chunk
+        for i, chunk_rich in enumerate(chunks):
+            new_block: dict[str, Any] = {"object": "block", "type": block_type}
+            new_block[block_type] = {**inner, "rich_text": chunk_rich}
+            # Don't carry over code language or other nested fields that are
+            # already set on the inner dict — keep them as-is via **inner
+            result.append(new_block)
+
+    return result
+
+
 def markdown_to_notion_blocks(markdown: str) -> list[dict[str, Any]]:
     """Convert a markdown string into a list of Notion block dicts.
 
@@ -207,7 +278,7 @@ def markdown_to_notion_blocks(markdown: str) -> list[dict[str, Any]]:
 
         i += 1
 
-    return blocks
+    return _split_long_blocks(blocks)
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +354,7 @@ def build_note_blocks(note: dict[str, Any]) -> list[dict[str, Any]]:
             else:
                 blocks.append(_bulleted(f"{label}: {text}"))
 
-    return blocks
+    return _split_long_blocks(blocks)
 
 
 # ---------------------------------------------------------------------------

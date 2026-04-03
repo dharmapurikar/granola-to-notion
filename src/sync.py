@@ -21,7 +21,6 @@ NOTION_PROPERTIES = {
     "Date": {"date": {}},
     "Attendees": {"rich_text": {}},
     "Organizer": {"rich_text": {}},
-    "Summary": {"rich_text": {}},
     "Category": {
         "select": {
             "options": [
@@ -155,14 +154,11 @@ class SyncEngine:
         title = note.get("title") or "Untitled Meeting"
         cal = note.get("calendar_event") or {}
         start = cal.get("scheduled_start_time") or note.get("created_at")
-        summary = note.get("summary_text") or ""
-
         return {
             "Meeting name": {"title": [{"text": {"content": title}}]},
             "Date": {"date": {"start": _fmt_date(start)}},
             "Attendees": {"rich_text": [{"text": {"content": _attendees_str(note)}}]},
             "Organizer": {"rich_text": [{"text": {"content": _organizer(note)}}]},
-            "Summary": {"rich_text": [{"text": {"content": summary[:2000]}}]},
             "Category": {"select": {"name": _infer_category(title)}},
             "Source URL": {"url": f"https://app.granola.ai/notes/{note.get('id')}"},
             "Granola ID": {"rich_text": [{"text": {"content": note.get("id", "")}}]},
