@@ -1,0 +1,37 @@
+# ============================================================
+# Granola → Notion Sync Configuration
+# ============================================================
+# Parent page under which the import database will be created.
+# Get this from the page URL: https://notion.so/Page-Name-{PAGE_ID}
+notion:
+  parent_page_id: "336916a5-3018-8016-98d0-c105d579134f"
+  database_name: "Granola Meeting Imports"
+  # Database schema — properties mapped from Granola note fields
+  properties:
+    meeting_name: "Meeting name"       # title — Granola note title
+    date: "Date"                         # date — scheduled_start_time
+    attendees: "Attendees"               # rich_text — comma-separated emails
+    organizer: "Organizer"                # rich_text
+    summary: "Summary"                   # rich_text — summary_text field
+    category: "Category"                  # select — inferred or "Meeting"
+    source_url: "Source URL"              # url — link back to Granola
+    granola_id: "Granola ID"             # rich_text — internal Granola note ID
+    synced_at: "Synced At"               # date — when this row was imported
+
+# Granola API
+granola:
+  # Number of notes per page (max 30 per API)
+  page_size: 30
+  # Include transcript when fetching individual notes
+  include_transcript: true
+
+# Local SQLite database
+database:
+  path: "granola_import.db"
+
+# Sync behaviour
+sync:
+  # Set to true to skip notes already in the database (idempotent)
+  skip_existing: true
+  # Set to true to overwrite existing Notion pages with fresh content
+  overwrite_notion: false
