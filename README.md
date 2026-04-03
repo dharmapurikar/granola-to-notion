@@ -15,7 +15,7 @@ Each note lands in Notion as a structured page containing:
 
 ```
 granola-to-notion/
-├── config.yaml          # Destination page, database schema, sync behaviour
+├── config.example.yaml  # Template — copy to config.yaml
 ├── .env.example         # Template for API keys
 ├── .gitignore
 ├── requirements.txt
@@ -63,11 +63,13 @@ cp .env.example .env
 |-----|----------------|
 | `NOTION_API_KEY` | [notion.so/my-integrations](https://www.notion.so/my-integrations) — create an integration, copy the token |
 | `GRANOLA_API_KEY` | Granola account settings |
-| `NOTION_PARENT_PAGE_ID` | Optional override for the parent page (default in `config.yaml`) |
 
 ### 4. Configure the destination
 
-Edit `config.yaml`:
+```bash
+cp config.example.yaml config.yaml
+# Edit config.yaml with your Notion parent page ID
+```
 
 ```yaml
 notion:

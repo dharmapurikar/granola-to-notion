@@ -1,10 +1,13 @@
 # ============================================================
 # Granola → Notion Sync Configuration
 # ============================================================
+# Copy this file to config.yaml and fill in your values:
+#   cp config.example.yaml config.yaml
+#
 # Parent page under which the import database will be created.
 # Get this from the page URL: https://notion.so/Page-Name-{PAGE_ID}
 notion:
-  parent_page_id: "336916a5-3018-8016-98d0-c105d579134f"
+  parent_page_id: "your-notion-page-id-here"
   database_name: "Granola Meeting Imports"
   # Database schema — properties mapped from Granola note fields
   properties:
