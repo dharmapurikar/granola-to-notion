@@ -6,11 +6,9 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
-# Load from ~/.hermes/.env (primary) then project .env (override)
-HERMES_ENV = Path.home() / ".hermes" / ".env"
+# Load .env from project root
 PROJECT_ENV = Path(__file__).parent.parent / ".env"
-load_dotenv(HERMES_ENV)
-load_dotenv(PROJECT_ENV, override=False)
+load_dotenv(PROJECT_ENV)
 
 CONFIG_PATH = Path(__file__).parent.parent / "config.yaml"
 
